@@ -24,8 +24,8 @@ public class compare {
 		}
 		
         try{
-        	String root1 = "/home/michael/Downloads/solr/plain/"; //location of first directory
-    		String root2 = "/home/michael/Downloads/solr/capisco/"; //location of second directory
+        	String root1 = "/home/mjc62/solr/plain/"; //location of first directory
+    		String root2 = "/home/mjc62/solr/capisco/"; //location of second directory
     		
     		ArrayList<documentSet> docs = new ArrayList<documentSet>();
             BufferedReader reader;
@@ -68,14 +68,21 @@ public class compare {
 			
 			//for each document create sets and print to results directory
 			for(documentSet d : docs){
+				
+				//create results directory if it does not exist
+				File docDir = new File("results/" + d.filename);
+				if (!docDir.exists()){
+					docDir.mkdir();
+				}
+				
 				HashSet<String> diff1 = new HashSet<String>();
 				HashSet<String> diff2 = new HashSet<String>();
 				HashSet<String> common = new HashSet<String>();
 				
-				PrintWriter diff1w = new PrintWriter("results/" + d.filename + "-plain-unique.txt", "UTF-8");
-	    		PrintWriter diff2w = new PrintWriter("results/" + d.filename + "-capisco-unique.txt", "UTF-8");
-	    		PrintWriter commonw = new PrintWriter("results/" + d.filename + "-common-set.txt", "UTF-8");
-	    		PrintWriter statsw = new PrintWriter("results/" + d.filename + "-stats.txt", "UTF-8");
+				PrintWriter diff1w = new PrintWriter("results/" + d.filename + "/" + d.filename + "-plain-unique.txt", "UTF-8");
+	    		PrintWriter diff2w = new PrintWriter("results/" + d.filename + "/" + d.filename + "-capisco-unique.txt", "UTF-8");
+	    		PrintWriter commonw = new PrintWriter("results/" + d.filename + "/" + d.filename + "-common-set.txt", "UTF-8");
+	    		PrintWriter statsw = new PrintWriter("results/" + d.filename + "/" + d.filename + "-stats.txt", "UTF-8");
 				
 				diff1.addAll(d.set1);
 				diff1.removeAll(d.set2);
