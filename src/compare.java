@@ -12,9 +12,9 @@ public class compare {
 	public static void main(String[] args) {
 		
 		class documentSet {
-			String filename;
-			HashSet<String> set1;
-			HashSet<String> set2;
+			String filename; //name of the file in both directories
+			HashSet<String> set1; //the set from one directory
+			HashSet<String> set2; //the set from the second directory
 			
 			public documentSet(String filename, HashSet<String> set1, HashSet<String> set2){
 				this.filename = filename;
@@ -24,11 +24,10 @@ public class compare {
 		}
 		
         try{
-        	String root1 = "/home/michael/Downloads/solr/plain/";
-    		String root2 = "/home/michael/Downloads/solr/capisco/";
+        	String root1 = "/home/michael/Downloads/solr/plain/"; //location of first directory
+    		String root2 = "/home/michael/Downloads/solr/capisco/"; //location of second directory
     		
     		ArrayList<documentSet> docs = new ArrayList<documentSet>();
-
             BufferedReader reader;
         	
             //loop through each file in directory 1 and build sets for this file and the matching file in the second directory
@@ -38,26 +37,36 @@ public class compare {
 				HashSet<String> set1 = new HashSet<String>();
 				HashSet<String> set2 = new HashSet<String>();
 				
+				//read all from first file and add to set1
 				reader = new BufferedReader(new FileReader(sub));
 				String line;
 		        while ((line = reader.readLine()) != null){
 		          set1.add(line);
 		        }
 		        
+		        //read all from second file and add to set2
 		        reader = new BufferedReader(new FileReader(sub2));
 		        while ((line = reader.readLine()) != null){
 		          set2.add(line);
 		        }
-		        
-		        docs.add(new documentSet(sub.getName(), set1, set2));
+		        docs.add(new documentSet(sub.getName(), set1, set2)); //store object in arraylist
 			}
 			
 			System.out.println("Sets Built");
+			
+			//objects to hold total difference and statistics for all files
 			HashSet<String> diff1total = new HashSet<String>();
 			HashSet<String> diff2total = new HashSet<String>();
 			HashSet<String> commontotal = new HashSet<String>();
 			String statstotal = "";
 			
+			//create results directory if it does not exist
+			File theDir = new File("results");
+			if (!theDir.exists()){
+				theDir.mkdir();
+			}
+			
+			//for each document create sets and print to results directory
 			for(documentSet d : docs){
 				HashSet<String> diff1 = new HashSet<String>();
 				HashSet<String> diff2 = new HashSet<String>();
@@ -98,13 +107,13 @@ public class compare {
 				statstotal += d.filename + ":: Shared/Common Element Count: " + common.size() + "\n\n";
 			}
 			
+			//create total stats file
 			String tmp = "";
 			tmp += "TOTAL :: Solr Unique Element Count: " + diff1total.size() + "\n";
 			tmp += "TOTAL :: Capisco Unique Element Count: " + diff2total.size() + "\n";
 			tmp += "TOTAL :: Shared/Common Element Count: " + commontotal.size() + "\n\n";
-			tmp += "********************************\n";
+			tmp += "********************************\n\n";
 			statstotal = tmp + statstotal;
-			
     		PrintWriter statsw = new PrintWriter("results/_TOTAL-stats.txt", "UTF-8");
     		statsw.write(statstotal);
     		statsw.close();
