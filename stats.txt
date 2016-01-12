@@ -1,3 +1,0 @@
-Solr Unique Element Count: 40124
-Capisco Unique Element Count: 7274
-Shared/Common Element Count: 1518
