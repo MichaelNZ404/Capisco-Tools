@@ -1,10 +1,18 @@
+/**This version is used to generate a plain lucene index of text file (no connection to capisco), 
+ * then, use progress in capisco.reverse to export txt version. Actually, only this java file is necessary for vanilla lucene index generation
+*/
+
+
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.SequenceInputStream;
 import java.text.BreakIterator;
 import java.util.Enumeration;
+import java.util.Vector;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -22,11 +30,13 @@ public class luceneBuilder
 {
 	File root;
 	IndexWriter writer;
+	String mode;
 	
-	public luceneBuilder(File root, File index) throws Exception
+	public luceneBuilder(File root, File index, String mode) throws Exception
 	{
 		this.root = root;
 		writer = createIndex(index);
+		this.mode = mode;
 	}
 
 	public static String fromStream(InputStream in) throws IOException
@@ -44,6 +54,22 @@ public class luceneBuilder
 	
 	public void run()
 	{
+		switch(mode){
+		case "w":
+		case "word":
+			runWordBased(); break;
+		case "p":
+		case "page":
+			runPageBased(); break;
+		case "v":
+		case "volume":
+			runVolumeBased(); break;
+		default:
+			System.err.println("Provided mode is not supported"); break;
+		}
+	}
+	private void runWordBased(){
+		
 		try
 		{	
 			for (File sub : FileUtils.listFiles(root, null, true))
@@ -58,17 +84,30 @@ public class luceneBuilder
 
 						if (size > 0) {
 							name = ze.getName();
-							String tit = name.substring(name.lastIndexOf("/")+1);
+							String title = name.substring(name.lastIndexOf("/")+1);
 							
 							String wholeContent = fromStream(zf.getInputStream(ze));
 							BreakIterator wordIterator = BreakIterator.getWordInstance(); 
-							wordIterator.setText(wholeContent);							
-							printEachForward(wordIterator, wholeContent, tit);
-											
+							wordIterator.setText(wholeContent);									
+							printEachForward(wordIterator, wholeContent, title);		
 						}
 					}
 					zf.close();
-				}							
+				}
+				else{
+					String name = null;
+					Vector<InputStream> inputStreams = new Vector<InputStream>();
+					name = sub.getName();
+					InputStream is = new FileInputStream(sub);
+					inputStreams.add(is);													
+					System.out.println(name + " queued"); //into buffer. Then, transfer the buffer to Capisco
+					SequenceInputStream sis = new SequenceInputStream(inputStreams.elements());	
+					String title = name.substring(name.lastIndexOf("/")+1);
+					String wholeContent = fromStream(sis);
+					BreakIterator wordIterator = BreakIterator.getWordInstance(); 
+					wordIterator.setText(wholeContent);	
+					printEachForward(wordIterator, wholeContent, title);
+				}
 			}
 			System.out.println("All files queued for processing, awaiting termination");
 		}
@@ -77,8 +116,15 @@ public class luceneBuilder
 			e.printStackTrace();
 		}
 	}
+	public void runPageBased(){
+		//todo
+	}
+	public void runVolumeBased(){
+		//todo
+	}
 	
-	public void printEachForward(BreakIterator boundary, String source, String name)throws IOException {
+	public void printEachForward(BreakIterator boundary, String source, String name)throws IOException 
+	{
 		int start = boundary.first();
 	     for (int end = boundary.next();
 	          end != BreakIterator.DONE;
@@ -131,19 +177,25 @@ public class luceneBuilder
 	{
 		// arg[0] = input documents directory path
 		// arg[1] = where to create/append to the index
+		// arg[2] = {
+		// w|word = word based builder
+		// p|page = page based builder
+		// v|volume = document based builder
+		//}
 		
-		if (args.length < 2)
+		if (args.length != 3)
 		{
-			System.out.println("Use: WMindexer <server URI> <server port> <input documents path> <index path> [number of workers] [database]");
+			System.out.println("Use: <input documents path> <index path> <mode>");
 			return;
 		}
 		
 		File documents = new File(args[0]);
 		File index = new File(args[1]);
+		String mode = args[2];
 		
 		try
 		{
-			luceneBuilder indexer = new luceneBuilder(documents, index);
+			luceneBuilder indexer = new luceneBuilder(documents, index, mode);
 			indexer.run();
 			indexer.close();
 		}
