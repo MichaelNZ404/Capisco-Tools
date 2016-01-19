@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 
 import org.apache.lucene.document.Document;
@@ -27,7 +28,7 @@ public class LuceneExtractor
 	private static String index;
 	private static String output;
 	private static String source;
-	private static luceneInfo information;
+	private static ArrayList<luceneInfo> information = new ArrayList<luceneInfo>();
 	
 	private static class luceneInfo{
 		public String name;
@@ -57,13 +58,16 @@ public class LuceneExtractor
 		index = args[0];
 		output = args[1];
 		
+		System.out.println("Building...");
 		build();
+		System.out.println("Dumping Texts...");
 		textDump();
 		bookwormDump();
 		if(args.length > 2){
 			source = args[2];
 			greenstoneDump();
 		}
+		System.out.println("Complete!");
 	}   
     
 	private static void build() throws IOException{
@@ -87,31 +91,32 @@ public class LuceneExtractor
 			ScoreDoc[] hits = results.scoreDocs;
 			
         	Document doc = searcher.doc(hits[0].doc);
-			information = new luceneInfo(docTitle, doc.getValues(valuefield), doc.getValues(countfield), doc.getValues(pagefield));
+			information.add(new luceneInfo(docTitle, doc.getValues(valuefield), doc.getValues(countfield), doc.getValues(pagefield)));
 		}
 	}
 	
 	private static void textDump() throws IOException
 	{	
-		File docDir = new File(output);
-		if (!docDir.exists()){
-			docDir.mkdir();
-		}
-	
-		File writename = new File(output + information.name);
-		BufferedWriter out = new BufferedWriter(new FileWriter(writename,true));
-		if(information.pages.length > 0){
-			for(int j = 0; j < information.concepts.length; j++){					 
-        	out.write(information.concepts[j] + "\t" + information.counts[j] + "\t" + information.pages[j] + "\n");
+		for(luceneInfo info : information){
+			File docDir = new File(output);
+			if (!docDir.exists()){
+				docDir.mkdir();
 			}
-		}
-		else{
-			for(int j = 0; j < information.concepts.length; j++){					 
-            	//out.write(resultConcepts[j] + "\t" + resultCounts[j] + "\n");
-            	out.write(information.concepts[j] + "\n");
+		
+			File writename = new File(docDir + "/" + info.name);
+			BufferedWriter out = new BufferedWriter(new FileWriter(writename,true));
+			if(info.pages.length > 0){
+				for(int j = 0; j < info.concepts.length; j++){					 
+	        	out.write(info.concepts[j] + "\t" + info.counts[j] + "\t" + info.pages[j] + "\n");
+				}
 			}
+			else{
+				for(int j = 0; j < info.concepts.length; j++){		
+	            	out.write(info.concepts[j] + "\t" + info.counts[j] + "\n");
+				}
+			}
+			out.close();
 		}
-		out.close();
 	}
 	
 	public static void greenstoneDump(){
