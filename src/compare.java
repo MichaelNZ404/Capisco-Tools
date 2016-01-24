@@ -9,7 +9,10 @@ import org.apache.commons.io.FileUtils;
 
 public class compare {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) {	
+		//args[0] location of first directory - solr
+		//args[1] location of second directory - capisco
+		//args[2] location of the output directory
 		
 		class documentSet {
 			String filename; //name of the file in both directories
@@ -24,9 +27,10 @@ public class compare {
 		}
 		
         try{
-        	String root1 = "/home/mjc62/solr/plain/"; //location of first directory
-    		String root2 = "/home/mjc62/solr/capisco/"; //location of second directory
-    		
+        	String root1 = args[0]; //location of first directory
+    		String root2 = args[1]; //location of second directory
+    		String output = args[2]; //location of the output directory
+        	
     		ArrayList<documentSet> docs = new ArrayList<documentSet>();
             BufferedReader reader;
         	
@@ -60,17 +64,9 @@ public class compare {
 			HashSet<String> commontotal = new HashSet<String>();
 			String statstotal = "";
 			
-			//create results directory if it does not exist
-			File theDir = new File("results");
-			if (!theDir.exists()){
-				theDir.mkdir();
-			}
-			
 			//for each document create sets and print to results directory
 			for(documentSet d : docs){
-				
-				//create results directory if it does not exist
-				File docDir = new File("results/" + d.filename);
+				File docDir = new File(output + d.filename);
 				if (!docDir.exists()){
 					docDir.mkdir();
 				}
@@ -79,10 +75,10 @@ public class compare {
 				HashSet<String> diff2 = new HashSet<String>();
 				HashSet<String> common = new HashSet<String>();
 				
-				PrintWriter diff1w = new PrintWriter("results/" + d.filename + "/" + d.filename + "-plain-unique.txt", "UTF-8");
-	    		PrintWriter diff2w = new PrintWriter("results/" + d.filename + "/" + d.filename + "-capisco-unique.txt", "UTF-8");
-	    		PrintWriter commonw = new PrintWriter("results/" + d.filename + "/" + d.filename + "-common-set.txt", "UTF-8");
-	    		PrintWriter statsw = new PrintWriter("results/" + d.filename + "/" + d.filename + "-stats.txt", "UTF-8");
+				PrintWriter diff1w = new PrintWriter(docDir + "/" + d.filename + "-plain-unique.txt", "UTF-8");
+	    		PrintWriter diff2w = new PrintWriter(docDir+ "/" + d.filename + "-capisco-unique.txt", "UTF-8");
+	    		PrintWriter commonw = new PrintWriter(docDir + "/" + d.filename + "-common-set.txt", "UTF-8");
+	    		PrintWriter statsw = new PrintWriter(docDir + "/" + d.filename + "-stats.txt", "UTF-8");
 				
 				diff1.addAll(d.set1);
 				diff1.removeAll(d.set2);
@@ -121,9 +117,11 @@ public class compare {
 			tmp += "TOTAL :: Shared/Common Element Count: " + commontotal.size() + "\n\n";
 			tmp += "********************************\n\n";
 			statstotal = tmp + statstotal;
-    		PrintWriter statsw = new PrintWriter("results/_TOTAL-stats.txt", "UTF-8");
+    		PrintWriter statsw = new PrintWriter(output + "_TOTAL-stats.txt", "UTF-8");
     		statsw.write(statstotal);
     		statsw.close();
+    		
+    		System.out.println("Completed!");
         }
         catch(Exception e){
         	e.printStackTrace();
