@@ -6,8 +6,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
-import java.util.Map;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -32,12 +30,103 @@ public class BookwormExtractor {
 			output = output + "/";
 		}
 		
-		Analyze(input, output);
-		
-
+		DickensAnalyze(input, output);
 	}
 	
-	public static void Analyze(String input, String output) throws IOException{
+	public static void DickensAnalyze(String input, String output) throws IOException{
+		BufferedReader reader = new BufferedReader(new FileReader(input));
+		String delimiter = "CHAPTER "; //if this occurs in the text then thats bad
+		
+		String line;
+		File capiscodir = new File(output + "capisco/");
+		capiscodir.mkdirs();
+		File metadir = new File(output + "meta/");
+		metadir.mkdirs();
+		//this writer creates a vanilla input in the meta directory for comparison
+		BufferedWriter iwriter = new BufferedWriter(new FileWriter(new File(metadir.getPath() + "/input.txt")));
+		
+		int count = 1;
+		BufferedWriter cwriter = null;
+		String chapterbuff = reader.readLine() + "\n";
+		while((line = reader.readLine()) != null){
+			//if this is a new chapter create a new file
+			if(line.startsWith(delimiter)){
+				cwriter = new BufferedWriter(new FileWriter(new File(capiscodir.getPath() + "/" + count + ".txt")));
+				cwriter.write(chapterbuff);
+				cwriter.close();
+				iwriter.write(count + ".txt\t" + chapterbuff.replace('\n', ' ').replace('\t', ' ') + "\n");
+				
+				JsonObject value = Json.createObjectBuilder()
+					     .add("searchstring", "<a href=https://www.gutenberg.org/ebooks/766>David Copperfield</a>")
+					     .add("filename", count + ".txt")
+					     .add("chapter", count)
+					     .add("author", "Charles Dickens")
+					     .build();
+				JsonWriterFactory factory = Json.createWriterFactory(value);
+				FileWriter fwriter = new FileWriter(new File(metadir.getPath() + "/jsoncatalog.txt"), true);
+				JsonWriter jwriter = factory.createWriter(fwriter);
+				jwriter.writeObject(value);
+				fwriter.write("\n");
+				jwriter.close();
+				
+				count++;
+				chapterbuff = "";
+			}
+			chapterbuff += line + "\n";
+		}
+		//write the final chapter
+		cwriter = new BufferedWriter(new FileWriter(new File(capiscodir.getPath() + "/" + count + ".txt")));
+		cwriter.write(chapterbuff);
+		cwriter.close();
+		iwriter.write(count + ".txt\t" + chapterbuff.replace('\n', ' ').replace('\t', ' ') + "\n");
+		iwriter.close();
+		
+		JsonObject value = Json.createObjectBuilder()
+			     .add("searchstring", "<a href=https://www.gutenberg.org/ebooks/766>David Copperfield</a>")
+			     .add("filename", count + ".txt")
+			     .add("chapter", count)
+			     .add("author", "Charles Dickens")
+			     .build();
+		//new FileWriter(new File(metadir.getPath() + "/" + id + ".json"))
+		JsonWriterFactory factory = Json.createWriterFactory(value);
+		FileWriter fwriter = new FileWriter(new File(metadir.getPath() + "/jsoncatalog.txt"), true);
+		JsonWriter jwriter = factory.createWriter(fwriter);
+		jwriter.writeObject(value);
+		fwriter.write("\n");
+		jwriter.close();
+
+		JsonObject tmp1 = Json.createObjectBuilder()
+			.add("field", "searchstring")
+			.add("datatype", "searchstring")
+			.add("type", "text")
+			.add("unique", true)
+			.build();
+		JsonObject tmp2 = Json.createObjectBuilder()
+				.add("field", "chapter")
+				.add("datatype", "categorical")
+				.add("type", "text")
+				.add("unique", true)
+				.build();
+		JsonObject tmp3 = Json.createObjectBuilder()
+				.add("field", "author")
+				.add("datatype", "categorical")
+				.add("type", "text")
+				.add("unique", true)
+				.build();
+		JsonArray structure = Json.createArrayBuilder()
+			.add(tmp1)
+			.add(tmp2)
+			.add(tmp3)
+			.build();
+
+		JsonWriterFactory ffactory = Json.createWriterFactory(null);
+		JsonWriter fjwriter = ffactory.createWriter(new FileWriter(new File(metadir.getPath() + "/field_descriptions.json"), true));
+		fjwriter.writeArray(structure);
+		fjwriter.close();
+		reader.close();
+	}
+	
+	public static void TweetAnalyze(String input, String output) throws IOException{
 		BufferedReader reader = new BufferedReader(new FileReader(input));
 		
 		String line;
@@ -47,6 +136,8 @@ public class BookwormExtractor {
 		capiscodir.mkdirs();
 		File metadir = new File(output + "meta/");
 		metadir.mkdirs();
+		//this writer creates a vanilla input in the meta directory for comparison
+		BufferedWriter iwriter = new BufferedWriter(new FileWriter(new File(metadir.getPath() + "/input.txt")));
 		
 		
 		while((line = reader.readLine()) != null){
@@ -63,27 +154,31 @@ public class BookwormExtractor {
 			else{	
 				String[] datetime = exploded[9].split(" - ");
 				String time = datetime[0];
+				time = time.substring(0, 2) + "00" + time.substring(5, time.length());
 				String date = datetime[1];
 				
-				BufferedWriter writer = new BufferedWriter(new FileWriter(new File(capiscodir.getPath() + "/" + id + ".txt")));
-				writer.write(text);
-				writer.close();
+				BufferedWriter cwriter = new BufferedWriter(new FileWriter(new File(capiscodir.getPath() + "/" + id + ".txt")));
+				iwriter.write(id + ".txt\t" + text.replace('\n', ' ').replace('\t', ' ') + "\n");
+				cwriter.write(text);
+				cwriter.close();
 			
 				JsonObject value = Json.createObjectBuilder()
 					     .add("searchstring", "<a href=https://twitter.com/user/status/"+id+">Tweet: "+id+" From: "+user+"</a>")
-					     .add("filename", id)
+					     .add("filename", id + ".txt")
 					     .add("date", date)
 					     .add("time", time)
 					     .build();
 				//new FileWriter(new File(metadir.getPath() + "/" + id + ".json"))
 				JsonWriterFactory factory = Json.createWriterFactory(value);
-				JsonWriter jwriter = factory.createWriter(new FileWriter(new File(metadir.getPath() + "/data.json"), true));
+				FileWriter fwriter = new FileWriter(new File(metadir.getPath() + "/jsoncatalog.txt"), true);
+				JsonWriter jwriter = factory.createWriter(fwriter);
 				jwriter.writeObject(value);
+				fwriter.write("\n");
 				jwriter.close();
 				accepted++;
 			}
 		}
-		
+		iwriter.close();
 		JsonObject tmp1 = Json.createObjectBuilder()
 			.add("field", "searchstring")
 			.add("datatype", "searchstring")
@@ -91,18 +186,12 @@ public class BookwormExtractor {
 			.add("unique", true)
 			.build();
 		JsonObject tmp2 = Json.createObjectBuilder()
-				.add("field", "filename")
-				.add("datatype", "categorical")
-				.add("type", "text")
-				.add("unique", true)
-				.build();;
-		JsonObject tmp3 = Json.createObjectBuilder()
 				.add("field", "date")
 				.add("datatype", "categorical")
 				.add("type", "text")
 				.add("unique", true)
 				.build();
-		JsonObject tmp4 = Json.createObjectBuilder()
+		JsonObject tmp3 = Json.createObjectBuilder()
 				.add("field", "time")
 				.add("datatype", "categorical")
 				.add("type", "text")
@@ -112,12 +201,11 @@ public class BookwormExtractor {
 			.add(tmp1)
 			.add(tmp2)
 			.add(tmp3)
-			.add(tmp4)
 			.build();
 
 		//new FileWriter(new File(metadir.getPath() + "/" + id + ".json"))
 		JsonWriterFactory factory = Json.createWriterFactory(null);
-		JsonWriter jwriter = factory.createWriter(new FileWriter(new File(metadir.getPath() + "/structure.json"), true));
+		JsonWriter jwriter = factory.createWriter(new FileWriter(new File(metadir.getPath() + "/field_descriptions.json"), true));
 		jwriter.writeArray(structure);
 		jwriter.close();
 		
