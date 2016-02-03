@@ -11,12 +11,14 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
+
+import xmlGenerator.xmlGenerate;
+import xmlGenerator.xmlGenerateSolr;
 
 public class LuceneExtractor
 {
@@ -30,26 +32,26 @@ public class LuceneExtractor
 	private static String source;
 	private static ArrayList<luceneInfo> information = new ArrayList<luceneInfo>();
 	
-	private static class luceneInfo{
-		public String name;
-		public String[] concepts;
-		public String[] counts;
-		public String[] pages;
-		
-		luceneInfo(String name, String[] concepts, String[] counts, String[] pages){
-			this.name = name;
-			this.concepts = concepts;
-			this.counts = counts;
-			this.pages = pages;
-		}
-	}
+//	private static class luceneInfo{
+//		public String name;
+//		public String[] concepts;
+//		public String[] counts;
+//		public String[] pages;
+//		
+//		luceneInfo(String name, String[] concepts, String[] counts, String[] pages){
+//			this.name = name;
+//			this.concepts = concepts;
+//			this.counts = counts;
+//			this.pages = pages;
+//		}
+//	}
 	
 	/**
 	 * 
 	 * @param args[0] directory of index
 	 * @param args[1] directory of output
 	 * 
-	 * @param args[2] directory of source files -- optional for greenstone
+	 * @param args[2] directory of source files -- optional for bookworm
 	 * 
 	 * @throws Exception
 	 */
@@ -62,13 +64,11 @@ public class LuceneExtractor
 		build();
 		System.out.println("Dumping Texts...");
 		textDump();
-		System.out.println("Dumping Bookworm...");
-		bookwormDump();
-		if(args.length > 2){
-			source = args[2];
-			System.out.println("Dumping greenstone...");
-			greenstoneDump();
-		}
+		//bookwormDump();
+//		if(args.length > 2){
+//			source = args[2];
+//			greenstoneDump();
+//		}
 		System.out.println("Complete!");
 	}   
     
@@ -85,13 +85,12 @@ public class LuceneExtractor
 		
 		//for each name, get the associated term
 		for(String docName : docNames){	
-			String docTitle = docName.substring(docName.lastIndexOf("/")+1) + ".txt";
-			
+			//String docTitle = docName.substring(docName.lastIndexOf("/")+1) + ".txt";   //end with .txt raises error in xmlGeneration
+			String docTitle = docName.substring(docName.lastIndexOf("/")+1);
 			Term term = new Term(namefield, docName);
 			TermQuery tq = new TermQuery(term);		
 			TopDocs results = searcher.search(tq, 1000);
-			ScoreDoc[] hits = results.scoreDocs;
-			
+			ScoreDoc[] hits = results.scoreDocs;	
         	Document doc = searcher.doc(hits[0].doc);
 			information.add(new luceneInfo(docTitle, doc.getValues(valuefield), doc.getValues(countfield), doc.getValues(pagefield)));
 		}
@@ -100,9 +99,9 @@ public class LuceneExtractor
 	private static void textDump() throws IOException
 	{	
 		for(luceneInfo info : information){
-			File docDir = new File(output + "/text/");
+			File docDir = new File(output);
 			if (!docDir.exists()){
-				docDir.mkdirs();
+				docDir.mkdir();
 			}
 		
 			File writename = new File(docDir + "/" + info.name);
@@ -121,40 +120,19 @@ public class LuceneExtractor
 		}
 	}
 	
-	public static void bookwormDump() throws IOException{
-		File docDir = new File(output + "/bookworm/");
-		if (!docDir.exists()){
-			docDir.mkdirs();
-		}
-		
-		File writename = new File(docDir + "/input.txt");
-		BufferedWriter out = new BufferedWriter(new FileWriter(writename,true));
-		
-		for(luceneInfo info : information){
-			if(info.concepts.length > 0){
-				out.write(info.name + "\t");
-				if(info.pages.length > 0){
-					for(int j = 0; j < info.concepts.length; j++){
-						for(int k = 0; k < (Integer.parseInt(info.counts[j]) * Integer.parseInt(info.pages[j])); k++){
-							out.write(info.concepts[j]+" ");
-						}
-					}
-				}
-				else{
-					for(int j = 0; j < info.concepts.length; j++){		
-						for(int k = 0; k < (Integer.parseInt(info.counts[j])); k++){
-							out.write(info.concepts[j]+" ");
-						}
-					}
-				}
-				out.write("\n");
-				out.flush();
+	public static void greenstoneDump(){
+		xmlGenerateSolr task = new xmlGenerateSolr(source);
+		for(int i = 0; i < information.size(); ++i){
+			try{
+				
+				org.w3c.dom.Document doc = task.buildDocument(source, information.get(i), index, namefield);
+				task.saveXML(doc, output, information.get(i).name);
+			}catch(Exception e){
+				e.getMessage();
 			}
 		}
-		out.close();
 	}
-	
-	public static void greenstoneDump(){
+	public static void bookwormDump(){
 		
 	}
 }
